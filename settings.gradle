@@ -1,0 +1,2 @@
+include ':app', ':dapp'
+rootProject.name = "AlphaWalletv2"
