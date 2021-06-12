@@ -2,19 +2,19 @@ package com.alphawallet.dapp;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import android.util.AttributeSet;
 import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.alphawallet.dapp.listeners.DappRequestListener;
 import com.alphawallet.dapp.listeners.SignCallbackJSInterface;
 import com.alphawallet.dapp.listeners.UrlLoadListener;
+import com.alphawallet.dapp.listeners.Web3EthCall;
 import com.alphawallet.dapp.model.DappMessage;
 import com.alphawallet.dapp.model.DappTransaction;
 import com.alphawallet.dapp.utils.ResourceExtensionsKt;
@@ -30,6 +30,19 @@ public class Web3View extends WebView {
     private final WrapWebViewClient wrapClient = new WrapWebViewClient(new Web3ViewClient(jsInjectorClient));
 
     private DappRequestListener outerListener = null;
+
+    private final Web3EthCall web3EthCaller = new Web3EthCall(new Web3EthCall.Callback() {
+
+        @Override
+        public void onCallFailure(int callbackId, @NotNull Throwable throwable) {
+            onCallFunctionError(callbackId, "");
+        }
+
+        @Override
+        public void onCallSuccessful(int callbackId, @NotNull String result) {
+            onCallFunctionSuccessful(callbackId, result);
+        }
+    });
 
     public Web3View(@NonNull Context context) {
         super(context);
@@ -75,6 +88,7 @@ public class Web3View extends WebView {
 
     public void setWalletAddress(@NonNull String address) {
         jsInjectorClient.setWalletAddress(address);
+        web3EthCaller.setFromAddress(address);
     }
 
     public void setChainId(int chainId) {
@@ -83,6 +97,7 @@ public class Web3View extends WebView {
 
     public void setRpcUrl(@NonNull String rpcUrl) {
         jsInjectorClient.setRpcUrl(rpcUrl);
+        web3EthCaller.setRpcUrl(rpcUrl);
     }
 
     public void setWebLoadCallback(UrlLoadListener listener) {
@@ -125,25 +140,24 @@ public class Web3View extends WebView {
     private final DappRequestListener innerListener = new DappRequestListener() {
         @Override
         public void onEthCall(int callbackId, @NotNull String recipient, @NotNull String payload) {
-            if(outerListener == null) return;
-            outerListener.onEthCall(callbackId, recipient, payload);
+            web3EthCaller.ethCall(callbackId, recipient, payload);
         }
 
         @Override
         public void onSignTypedMessageRequest(int callbackId, @NotNull String payload) {
-            if(outerListener == null) return;
+            if (outerListener == null) return;
             outerListener.onSignTypedMessageRequest(callbackId, payload);
         }
 
         @Override
         public void onTransactionSignRequest(@NotNull DappTransaction transaction) {
-            if(outerListener == null) return;
+            if (outerListener == null) return;
             outerListener.onTransactionSignRequest(transaction);
         }
 
         @Override
         public void onMessageSignRequest(@NotNull DappMessage message) {
-            if(outerListener == null) return;
+            if (outerListener == null) return;
             outerListener.onMessageSignRequest(message);
         }
     };
